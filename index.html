@@ -1,20 +1,133 @@
 <!DOCTYPE html>
-
-<html>
+<html lang="en">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-  <title>Spoon-Knife</title>
-  <LINK href="styles.css" rel="stylesheet" type="text/css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F&O IV Spike Tracing - Options Implied Volatility Monitor</title>
+    <link href="styles.css" rel="stylesheet" type="text/css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
-
 <body>
+    <div class="container">
+        <header>
+            <h1>F&O IV Spike Tracing System</h1>
+            <p class="subtitle">Real-time Implied Volatility Monitoring & Spike Detection</p>
+        </header>
 
-<img src="forkit.gif" id="octocat" alt="" />
+        <div class="controls-panel">
+            <div class="control-group">
+                <label for="symbol">Symbol:</label>
+                <select id="symbol">
+                    <option value="NIFTY">NIFTY</option>
+                    <option value="BANKNIFTY">BANKNIFTY</option>
+                    <option value="FINNIFTY">FINNIFTY</option>
+                    <option value="RELIANCE">RELIANCE</option>
+                    <option value="TCS">TCS</option>
+                    <option value="INFY">INFY</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="expiry">Expiry:</label>
+                <select id="expiry">
+                    <option value="current">Current Week</option>
+                    <option value="next">Next Week</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="spikeThreshold">Spike Threshold (%):</label>
+                <input type="number" id="spikeThreshold" value="20" min="5" max="100" step="5">
+            </div>
+            <div class="control-group">
+                <button id="refreshBtn" class="btn-primary">Refresh Data</button>
+                <button id="toggleMonitor" class="btn-secondary">Start Monitor</button>
+            </div>
+        </div>
 
-<!-- Feel free to change this text here -->
-<p>
-  Fork me? Fork you, @octocat!
-</p>
+        <div class="stats-panel">
+            <div class="stat-card">
+                <div class="stat-label">Active Spikes</div>
+                <div class="stat-value" id="activeSpikes">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg IV (CE)</div>
+                <div class="stat-value" id="avgIVCall">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg IV (PE)</div>
+                <div class="stat-value" id="avgIVPut">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Max IV Change</div>
+                <div class="stat-value" id="maxIVChange">--</div>
+            </div>
+        </div>
 
+        <div class="alerts-section">
+            <h2>IV Spike Alerts</h2>
+            <div id="alertsContainer" class="alerts-container">
+                <p class="no-alerts">No spikes detected. Monitoring...</p>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <h2>Historical IV Trend</h2>
+            <div class="chart-container">
+                <canvas id="ivChart"></canvas>
+            </div>
+        </div>
+
+        <div class="options-chain-section">
+            <h2>Options Chain - Live IV Data</h2>
+            <div class="table-controls">
+                <label>
+                    <input type="checkbox" id="filterSpikes"> Show Only Spikes
+                </label>
+                <label>
+                    Sort by:
+                    <select id="sortBy">
+                        <option value="strike">Strike</option>
+                        <option value="callIV">Call IV</option>
+                        <option value="putIV">Put IV</option>
+                        <option value="callChange">Call Change %</option>
+                        <option value="putChange">Put Change %</option>
+                    </select>
+                </label>
+            </div>
+            <div class="table-wrapper">
+                <table id="optionsChain">
+                    <thead>
+                        <tr>
+                            <th colspan="5">CALLS</th>
+                            <th>Strike</th>
+                            <th colspan="5">PUTS</th>
+                        </tr>
+                        <tr>
+                            <th>IV</th>
+                            <th>Change %</th>
+                            <th>OI</th>
+                            <th>Volume</th>
+                            <th>LTP</th>
+                            <th>Price</th>
+                            <th>LTP</th>
+                            <th>Volume</th>
+                            <th>OI</th>
+                            <th>Change %</th>
+                            <th>IV</th>
+                        </tr>
+                    </thead>
+                    <tbody id="chainBody">
+                        <!-- Options chain data will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <footer>
+            <p>Last Updated: <span id="lastUpdate">--</span> | Status: <span id="monitorStatus">Idle</span></p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
 </body>
 </html>
