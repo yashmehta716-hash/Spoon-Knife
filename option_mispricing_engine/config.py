@@ -20,8 +20,12 @@ class Settings:
     iv_spike_threshold_pct: float = 5.0
     max_underlying_move_pct: float = 0.15
     min_option_move_pct: float = 1.0
+    alert_cooldown_seconds: int = 60
+    duckdb_path: str = "mispricing.duckdb"
     debug_mode: bool = False
     max_symbols: int | None = None
+    symbol_concurrency: int = 8
+    scan_expiries_per_symbol: int = 2
 
 
 def load_settings() -> Settings:
@@ -44,6 +48,13 @@ def load_settings() -> Settings:
         min_volume=int(os.getenv("MIN_VOLUME", "100")),
         min_oi=int(os.getenv("MIN_OI", "500")),
         max_bid_ask_spread_pct=float(os.getenv("MAX_BID_ASK_SPREAD_PCT", "1.5")),
+        iv_spike_threshold_pct=float(os.getenv("IV_SPIKE_THRESHOLD_PCT", "5")),
+        max_underlying_move_pct=float(os.getenv("MAX_UNDERLYING_MOVE_PCT", "0.15")),
+        min_option_move_pct=float(os.getenv("MIN_OPTION_MOVE_PCT", "1.0")),
+        alert_cooldown_seconds=int(os.getenv("ALERT_COOLDOWN_SECONDS", "60")),
+        duckdb_path=os.getenv("DUCKDB_PATH", "mispricing.duckdb"),
         debug_mode=os.getenv("DEBUG_MODE", "false").lower() == "true",
         max_symbols=max_symbols,
+        symbol_concurrency=int(os.getenv("SYMBOL_CONCURRENCY", "8")),
+        scan_expiries_per_symbol=int(os.getenv("SCAN_EXPIRIES_PER_SYMBOL", "2")),
     )

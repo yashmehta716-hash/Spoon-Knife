@@ -55,13 +55,11 @@ class SignalEngine:
             return None
         reasons.append("liquidity")
 
-        if spread_pct is not None and spread_pct > self.max_bid_ask_spread_pct:
+        if spread_pct is None or spread_pct > self.max_bid_ask_spread_pct:
             return None
         reasons.append("spread")
 
         if abs(fut_change_pct) > self.max_underlying_move_pct:
-            return None
-        if abs(opt_change_pct) < self.min_option_move_pct:
             return None
         reasons.append("underlying_stable")
 
@@ -69,8 +67,12 @@ class SignalEngine:
             return None
         reasons.append("iv_spike")
 
-        if not (oi_change > 0 and opt_change_pct > 0):
-            return None
+        if action == "SELL":
+            if not (opt_change_pct > self.min_option_move_pct and oi_change > 0):
+                return None
+        else:
+            if not (opt_change_pct < -self.min_option_move_pct and oi_change > 0):
+                return None
         reasons.append("oi_confirmation")
 
         score = self._score(inefficiency_score, iv_spike_pct, oi_change, fut_change_pct, trend_strength)

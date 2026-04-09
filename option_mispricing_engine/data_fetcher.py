@@ -58,39 +58,38 @@ class KiteDataFetcher:
             nearest = min(futures, key=lambda x: x["expiry"])
             universe[symbol] = {"future": nearest}
 
-        for idx in ["NIFTY", "BANKNIFTY", "FINNIFTY"]:
-            if idx in universe:
-                continue
-            if idx in futures_by_symbol:
-                nearest = min(futures_by_symbol[idx], key=lambda x: x["expiry"])
-                universe[idx] = {"future": nearest}
-
         symbols = sorted(universe)
         if max_symbols:
             symbols = symbols[:max_symbols]
         return {sym: universe[sym] for sym in symbols}
 
-    async def get_symbol_option_contracts(self, symbol: str, expiry: date | None = None) -> list[InstrumentRef]:
+    async def get_option_expiries(self, symbol: str) -> list[date]:
+        instruments = await self.load_instruments()
+        expiries = sorted(
+            {
+                ins["expiry"]
+                for ins in instruments
+                if ins.get("name") == symbol and ins.get("instrument_type") in {"CE", "PE"}
+            }
+        )
+        return expiries
+
+    async def get_symbol_option_contracts(self, symbol: str, expiries: list[date] | None = None) -> list[InstrumentRef]:
         instruments = await self.load_instruments()
         contracts: list[InstrumentRef] = []
 
-        if expiry is None:
-            expiries = sorted(
-                {
-                    ins["expiry"]
-                    for ins in instruments
-                    if ins.get("name") == symbol and ins.get("instrument_type") in {"CE", "PE"}
-                }
-            )
-            if not expiries:
+        if expiries is None:
+            all_expiries = await self.get_option_expiries(symbol)
+            if not all_expiries:
                 return []
-            expiry = expiries[0]
+            expiries = [all_expiries[0]]
 
+        expiry_set = set(expiries)
         for ins in instruments:
             if (
                 ins.get("name") == symbol
                 and ins.get("instrument_type") in {"CE", "PE"}
-                and ins.get("expiry") == expiry
+                and ins.get("expiry") in expiry_set
             ):
                 contracts.append(
                     InstrumentRef(

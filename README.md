@@ -1,58 +1,38 @@
 # Option Mispricing Engine
 
-A production-grade Python scanner for NSE F&O options mispricing detection using **Kite Connect** market data and a **Black-Scholes futures-based fair value model**.
+Production-grade NSE F&O option mispricing scanner using **Kite Connect + Black-Scholes (futures-based)** with **DuckDB persistence** and a **FastAPI + HTMX live dashboard**.
 
-## Features
+## What is fixed vs initial version
 
-- Scans NSE F&O stocks plus NIFTY / BANKNIFTY / FINNIFTY.
-- Uses **futures LTP (not spot)** as underlying for pricing.
-- Computes implied volatility from market option price (bisection IV solver).
-- Computes fair call/put values with Black-Scholes (futures form).
-- Detects inefficiency:
-  - Overpriced: inefficiency > +100% (SELL)
-  - Underpriced: inefficiency < -40% (BUY)
-- Applies strict filters:
-  - Liquidity (Volume/OI thresholds)
-  - Bid-ask spread guard
-  - Underlying low movement + option movement
-  - IV spike confirmation
-  - OI build-up confirmation
-- Produces weighted mispricing score (0-100).
-- Terminal table + optional Telegram alerts.
-- Async scan loop (default every 3 seconds).
+- Fair value volatility is now **independent** from current tick price where possible:
+  - pricing IV uses previous snapshot IV (or ATM reference IV fallback),
+  - current IV is used for IV-spike diagnostics.
+- Option expiry handling is corrected:
+  - scanner uses option expiries directly (nearest `SCAN_EXPIRIES_PER_SYMBOL`) instead of forcing futures expiry.
+- Added top OI + top volume strike enrichment in scan selection (with ATM ±5 core focus).
+- Added DuckDB storage for snapshots/signals.
+- Added alert cooldown to avoid Telegram spam.
+- Added FastAPI+HTMX dashboard for live monitoring.
 
-## Project Structure
+## Modules
 
-```text
-option_mispricing_engine/
-  config.py
-  data_fetcher.py
-  iv_solver.py
-  pricing_model.py
-  scanner.py
-  signal_engine.py
-  telegram_alert.py
-run.py
-.env.example
-requirements.txt
-```
+- `data_fetcher.py` — Kite Connect instruments/quote ingestion.
+- `iv_solver.py` — bisection implied-volatility solver.
+- `pricing_model.py` — Black-Scholes futures option pricing.
+- `signal_engine.py` — all filters and weighted 0–100 mispricing score.
+- `scanner.py` — async scan loop + scoring + persistence + alerting.
+- `storage.py` — DuckDB schema and read/write APIs.
+- `telegram_alert.py` — Telegram bot notifications.
+- `webapp.py` — FastAPI + HTMX dashboard.
 
 ## Setup
 
-1. Install Python 3.11+.
-2. Install dependencies:
-
 ```bash
 pip install -r requirements.txt
-```
-
-3. Create your `.env` file:
-
-```bash
 cp .env.example .env
 ```
 
-4. Fill values:
+Fill `.env`:
 
 ```env
 KITE_API_KEY=
@@ -64,31 +44,54 @@ RISK_FREE_RATE=0.06
 MIN_VOLUME=100
 MIN_OI=500
 MAX_BID_ASK_SPREAD_PCT=1.5
+IV_SPIKE_THRESHOLD_PCT=5
+MAX_UNDERLYING_MOVE_PCT=0.15
+MIN_OPTION_MOVE_PCT=1
+ALERT_COOLDOWN_SECONDS=60
+DUCKDB_PATH=mispricing.duckdb
+SYMBOL_CONCURRENCY=8
+SCAN_EXPIRIES_PER_SYMBOL=2
 DEBUG_MODE=false
 ```
 
 ## Run
 
+### Terminal scanner
+
 ```bash
 python run.py
 ```
 
-## Notes
+### Web dashboard (FastAPI + HTMX)
 
-- Exchange source is **NFO** instruments.
-- Nearest-expiry futures are selected per symbol and used as underlying.
-- Scanner focuses on **ATM ± 5 strikes** (both CE and PE) for performance.
-- If Telegram credentials are absent, scanner still runs with terminal output only.
+```bash
+python run_web.py
+```
 
-## Telegram Alert Example
+Open: `http://localhost:8000`
+
+## Output
+
+### Terminal
+
+`SYMBOL | STRIKE | TYPE | EXPIRY | FAIR | LTP | SCORE | ACTION | PRIORITY`
+
+### Telegram alert
 
 ```text
 🚨 MISPRICING ALERT
 Stock: RELIANCE
 Strike: 2500 CE
+Expiry: 2026-04-30
 Fair Value: 12.00
 Market Price: 30.00
 Inefficiency: +150.00%
 Signal: SELL CALL
 Priority: 🟠 High
 ```
+
+## Notes
+
+- Underlying for valuation is futures LTP, never spot.
+- Scanner evaluates nearest option expiries and prioritizes ATM ±5 + high OI/volume contracts.
+- DuckDB stores all snapshots/signals for later analytics and dashboard rendering.
